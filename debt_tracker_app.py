@@ -1,42 +1,35 @@
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Title
-st.title("📊 Debt Tracker Dashboard")
+st.title("📉 Debt Payoff Tracker with Sliders")
 
-# Sample debt data
-debt_data = {
-    "Creditor": ["Apple Card", "Best Buy", "Credit One", "Capital One Savor", "Capital One Quicksilver", "Kohl's", "Target", "Carter's", "Affirm (Total)"],
-    "Balance ($)": [2543.51, 2000, 500, 300, 300, 300, 300, 180, 3640],
-    "Interest Rate (%)": [24.99, 25.00, 28.74, 29.74, 28.99, 30.24, 29.99, 28.00, 15.00],
-    "Min Payment ($)": [87, 150, 80, 115, 115, 72, 40, 30, 300],
-    "Status": ["❌"] * 9
-}
+# 👉 User inputs
+starting_debt = st.number_input("Starting Debt ($)", min_value=0, value=2500, step=100)
+monthly_payment = st.slider("Monthly Payment ($)", min_value=10, max_value=1000, value=150, step=10)
+interest_rate = st.slider("Interest Rate (%)", min_value=0.0, max_value=30.0, value=20.0, step=0.1)
+months = st.slider("Months to Project", min_value=1, max_value=60, value=24)
 
-df = pd.DataFrame(debt_data)
+# 🔍 Simulate payoff
+balance = starting_debt
+monthly_data = []
 
-# Display table
-st.subheader("💳 Debt Overview")
-edited_df = st.data_editor(df, num_rows="dynamic", key="debt_table")
+for month in range(1, months + 1):
+    interest = balance * (interest_rate / 100) / 12
+    principal = monthly_payment - interest
+    balance -= principal
+    balance = max(balance, 0)
+    monthly_data.append({"Month": month, "Balance": round(balance, 2)})
+    if balance <= 0:
+        break
 
-# Bar chart: Balances
-st.subheader("📉 Balances by Creditor")
+df = pd.DataFrame(monthly_data)
+
+# 📊 Bar chart
+st.subheader("📊 Debt Balance Over Time")
 fig, ax = plt.subplots()
-ax.bar(edited_df["Creditor"], edited_df["Balance ($)"])
-plt.xticks(rotation=45, ha='right')
-plt.ylabel("Amount ($)")
-plt.tight_layout()
+ax.bar(df["Month"], df["Balance"])
+ax.set_xlabel("Month")
+ax.set_ylabel("Remaining Balance ($)")
+ax.set_title("Debt Payoff Progress")
 st.pyplot(fig)
-
-# Summary stats
-total_debt = edited_df["Balance ($)"].sum()
-monthly_min = edited_df["Min Payment ($)"].sum()
-
-st.markdown(f"### 🧮 Total Debt: ${total_debt:,.2f}")
-st.markdown(f"### 💸 Total Minimum Monthly Payments: ${monthly_min:,.2f}")
-
-# Completion Tracker
-st.subheader("✅ Progress Tracker")
-st.progress((edited_df["Status"].tolist().count("✅") / len(edited_df)))
